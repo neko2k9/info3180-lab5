@@ -26,28 +26,48 @@ def home():
 def about():
     """Render the website's about page."""
     return render_template('about.html')
+    
+@app.route('/secure-page/')
+@login_required
+def secure_page():
+    return render_template('secure_page.html')
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     form = LoginForm()
-    if request.method == "POST":
+    if request.method == "POST" and form.validate_on_submit():
         # change this to actually validate the entire form submission
         # and not just one field
-        if form.username.data:
-            # Get the username and password values from the form.
+        username=form.username.data
+        password=form.password.data
+        user=UserProfile.query.filter_by(username=username,password=password).first()
+        # Get the username and password values from the form.
 
-            # using your model, query database for a user based on the username
-            # and password submitted
-            # store the result of that query to a `user` variable so it can be
-            # passed to the login_user() method.
+        # using your model, query database for a user based on the username
+        # and password submitted
+        # store the result of that query to a `user` variable so it can be
+        # passed to the login_user() method.
 
-            # get user id, load into session
+        # get user id, load into session
+        if user is not None:
             login_user(user)
+            flash("Success")
+            return redirect(url_for("securepage"))
+        else:
+            flash("Error occurred")
+            return redirect(url_for("home"))
 
-            # remember to flash a message to the user
-            return redirect(url_for("home"))  # they should be redirected to a secure-page route instead
+        # remember to flash a message to the user
+        # they should be redirected to a secure-page route instead
     return render_template("login.html", form=form)
+    
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("Successfully logged out")
+    return redirect(url_for('home'))
 
 
 # user_loader callback. This callback is used to reload the user object from
