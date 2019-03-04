@@ -6,10 +6,11 @@ This file creates your application.
 """
 
 from app import app, db, login_manager
+from werkzeug.security import check_password_hash
 from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, current_user, login_required
-from forms import LoginForm
-from models import UserProfile
+from .forms import LoginForm
+from .models import UserProfile
 
 
 ###
@@ -35,31 +36,32 @@ def secure_page():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    if current_user.is_authenticated:
+        # if user is already logged in, just redirect them to our secure page
+        # or some other page like a dashboard
+        return redirect(url_for('secure_page'))
     form = LoginForm()
     if request.method == "POST" and form.validate_on_submit():
         # change this to actually validate the entire form submission
         # and not just one field
+        # Get the username and password values from the form.
         username=form.username.data
         password=form.password.data
-        user=UserProfile.query.filter_by(username=username,password=password).first()
-        # Get the username and password values from the form.
-
         # using your model, query database for a user based on the username
-        # and password submitted
-        # store the result of that query to a `user` variable so it can be
-        # passed to the login_user() method.
-
+        # and password submitted. Remember you need to compare the password hash.
+        # You will need to import the appropriate function to do so.
+        # Then store the result of that query to a `user` variable so it can be
+        # passed to the login_user() method below.
+        user = UserProfile.query.filter_by(username=username, password=password).first()
         # get user id, load into session
-        if user is not None:
+        if user is not None and check_password_hash(user.password, password):
             login_user(user)
-            flash("Success")
-            return redirect(url_for("securepage"))
+             # remember to flash a message to the user
+            flash("You have successfully logged in!")
+            # they should be redirected to a secure-page route instead
+            return redirect(url_for("secure_page"))
         else:
-            flash("Error occurred")
-            return redirect(url_for("home"))
-
-        # remember to flash a message to the user
-        # they should be redirected to a secure-page route instead
+            flash("Error occurred. Username or Password is incorrect.")
     return render_template("login.html", form=form)
     
 @app.route("/logout")
